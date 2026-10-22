@@ -1,0 +1,39 @@
+name: Build Crystal Islands GBA ROM
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "Crystal_Islands_GBA_Enhanced_Fixed.zip"
+      - ".github/workflows/build.yml"
+
+jobs:
+  build-rom:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out project
+        uses: actions/checkout@v4
+
+      - name: Build ROM with devkitPro
+        run: |
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/work" \
+            -w /work \
+            devkitpro/devkitarm:latest \
+            bash -lc '
+              export DEVKITPRO=/opt/devkitpro
+              export DEVKITARM="$DEVKITPRO/devkitARM"
+              export PATH="$DEVKITPRO/tools/bin:$DEVKITARM/bin:$PATH"
+              command -v dkp-pacman >/dev/null 2>&1 && dkp-pacman -S --noconfirm gba-dev || true
+              unzip -q Crystal_Islands_GBA_Enhanced_Fixed.zip -d project
+              cd project/Crystal_Islands_GBA_Enhanced
+              make
+            '
+
+      - name: Upload compiled GBA ROM
+        uses: actions/upload-artifact@v4
+        with:
+          name: Crystal-Islands-GBA-ROM
+          path: project/Crystal_Islands_GBA_Enhanced/crystal_islands.gba
+          if-no-files-found: error
+          retention-days: 14
